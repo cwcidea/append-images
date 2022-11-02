@@ -1,0 +1,51 @@
+FROM sugonhub/sothisai:codeserver as base
+#请确保网络畅通，插件可自行安装
+#请将以下FROM后的镜像修改为需要添加codeserver的原始镜像
+FROM original_images_name
+#如有问题请通过以下邮箱联系
+LABEL maintainer="chenwch1@sugon.com"
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+ENV SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
+ARG SOURCES="-i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
+SHELL ["/bin/bash","-c"]
+USER root
+WORKDIR /tmprm
+COPY --from=base /tmp/code-server_4.7.0_amd64.deb ./
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak; \
+mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak; \
+version_codename=$(cat /etc/os-release | grep -i 'VERSION_CODENAME' | awk -F= '{print $2}') \
+&& echo -e "deb http://mirrors.aliyun.com/ubuntu/ ${version_codename} main restricted universe multiverse \n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_codename}-security main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_codename}-updates main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_codename}-proposed main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_codename}-backports main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename} main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-security main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-updates main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-proposed main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-backports main restricted universe multiverse" > /etc/apt/sources.list \
+    && apt-get update -y \
+    && apt-get install --no-install-recommends -y \
+    openssl \
+    libssl-dev \
+    net-tools \
+    locales \
+    wget \
+    git \
+    sudo \
+    openssh-client \
+    openssh-server \
+    && locale-gen en_US.UTF-8 \
+    && dpkg -i code-server_4.7.0_amd64.deb \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmprm \
+    && mv /etc/apt/sources.list.bak /etc/apt/sources.list \
+    && mv /etc/apt/sources.list.d.bak /etc/apt/sources.list.d \
+    && ssh-keygen  -A
+WORKDIR /
+EXPOSE 8080

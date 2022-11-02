@@ -1,0 +1,60 @@
+FROM sugonhub/sothisai:codeserver as base
+#请确保网络畅通，插件可自行安装
+#请将以下FROM后的镜像修改为需要添加codeserver的原始镜像
+FROM original_images_name
+#如有问题请通过以下邮箱联系
+LABEL maintainer="chenwch1@sugon.com"
+ENV SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
+SHELL ["/bin/bash","-c"]
+USER root
+RUN set -xe; \
+    mkdir /etc/yum.repos.d/bak; \
+    mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/bak/; \
+    flag="$(cat /etc/redhat-release)"; \
+    major_version=$(echo ${flag##*release} | awk '{print $1}' | awk -F. '{print $1}'); \
+    release_version=$(echo ${flag##*release} | awk '{print $1}'); \
+    minorver=${release_version}; \
+    if [[ ${major_version} -lt 7 ]]; \
+    then cp /etc/yum.repos.d/bak/CentOS*-Base* /etc/yum.repos.d/; \
+    sed -e "s|^mirrorlist=|#mirrorlist=|g" \
+         -e "s|^#baseurl=http://mirror.centos.org/centos/\$releasever|baseurl=https://mirrors.aliyun.com/centos-vault/$minorver|g" \
+         -i.bak \
+         /etc/yum.repos.d/CentOS-*.repo; \
+    elif [[ ${major_version} -eq 7 ]]; \
+    then curl -ko /etc/yum.repos.d/CentOS-Base.repo https://mirrors.163.com/.help/CentOS7-Base-163.repo; \
+    else cp /etc/yum.repos.d/bak/CentOS*-Base* /etc/yum.repos.d/; \
+    sed -e "s|^mirrorlist=|#mirrorlist=|g" \
+    -e "s|^#baseurl=http://mirror.centos.org/\$contentdir/\$releasever|baseurl=https://mirrors.aliyun.com/centos-vault/$minorver|g" \
+    -i.bak \
+    /etc/yum.repos.d/CentOS-*.repo;fi; \
+    yum clean all \
+    && yum makecache \
+    && yum install -y \
+    vim \
+    which \
+    openssl \
+    openssl-devel \
+    openssl-static \
+    net-tools \
+    wget \
+    git \
+    sudo \
+    openssh \
+    openssh-server \
+    && yum clean all \
+    && rm -rf /var/cache/yum/*; \
+    rm -rf /etc/yum.repos.d/*.repo \
+    && mv /etc/yum.repos.d/bak/* /etc/yum.repos.d/ \
+    && rm -rf /etc/yum.repos.d/bak
+WORKDIR /tmprm
+COPY --from=base /tmp/code-server-4.7.0-amd64.rpm ./
+RUN yum install -y code-server-4.7.0-amd64.rpm \
+    && yum clean all \
+    && rm -rf /var/cache/yum/* \
+    && rm -rf /tmprm \
+    && ssh-keygen  -A
+WORKDIR /
+EXPOSE 8080

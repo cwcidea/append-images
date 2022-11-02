@@ -1,0 +1,60 @@
+#请确保网络畅通
+#请将以下FROM后的镜像修改为需要添加rstudio的原始镜像
+FROM original_images_name
+#如有问题请通过以下邮箱联系
+LABEL maintainer="chenwch1@sugon.com"
+ARG R_VERSION=4.2.1
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+ENV SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
+ENV PATH=/usr/lib/rstudio-server/bin:${PATH}
+SHELL ["/bin/bash","-c"]
+USER root
+WORKDIR /tmprm
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak \
+&& mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak \
+&& version_codename=$(cat /etc/os-release | grep -i 'VERSION_CODENAME' | awk -F= '{print $2}') \
+&& version_id=$(cat /etc/os-release | grep -i 'VERSION_ID' | awk -F= '{print $2}' | sed 's/\"//g' | awk -F. '{print $1$2}') \
+&& echo -e "deb http://mirrors.aliyun.com/ubuntu/ ${version_codename} main restricted universe multiverse \n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_codename}-security main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_codename}-updates main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_codename}-proposed main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_codename}-backports main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename} main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-security main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-updates main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-proposed main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-backports main restricted universe multiverse" > /etc/apt/sources.list \
+    && apt-get update -y \
+    && apt-get install --no-install-recommends -y \
+    gdebi-core \
+    curl \
+    openssl \
+    locales \
+    libssl-dev \
+    net-tools \
+    wget \
+    git \
+    sudo \
+    openssh-client \
+    openssh-server \
+    && locale-gen en_US.UTF-8 \
+    && curl -C - -kO --retry 10 https://cdn.rstudio.com/r/ubuntu-${version_id}/pkgs/r-${R_VERSION}_1_amd64.deb \
+    && curl -C - -kO --retry 10 https://download2.rstudio.org/server/bionic/amd64/rstudio-server-2022.07.2-576-amd64.deb \
+    && gdebi -n r-${R_VERSION}_1_amd64.deb \
+    && ln -s /opt/R/4.2.1/bin/R /usr/local/bin/R \
+    && ln -s /opt/R/4.2.1/bin/Rscript /usr/local/bin/Rscript \
+    && gdebi -n rstudio-server-2022.07.2-576-amd64.deb \
+    && chmod 1777 /var/run/rstudio-server \
+    && chmod 1777 /var/lib/rstudio-server \
+    && rm -rf /var/lib/rstudio-server/rstudio-os.sqlite \
+    && echo "export PATH=/usr/lib/rstudio-server/bin:${PATH}" >> /etc/bashrc \
+    && rm -rf /tmprm \
+    && rm -rf /var/cache/yum/* \
+    && ssh-keygen -A
+WORKDIR /
+ENTRYPOINT bash --login;
+

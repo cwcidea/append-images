@@ -1,0 +1,64 @@
+FROM sugonhub/sothisai:rstudio as base
+#请确保网络畅通
+#请将以下FROM后的镜像修改为需要添加rstudio的原始镜像
+FROM original_images_name
+#如有问题请通过以下邮箱联系
+LABEL maintainer="chenwch1@sugon.com"
+ENV SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
+ENV PATH=/usr/lib/rstudio-server/bin:${PATH}
+SHELL ["/bin/bash","-c"]
+USER root
+RUN set -xe; \
+    mkdir /etc/yum.repos.d/bak; \
+    mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/bak/; \
+    flag="$(cat /etc/redhat-release)"; \
+    major_version=$(echo ${flag##*release} | awk '{print $1}' | awk -F. '{print $1}'); \
+    release_version=$(echo ${flag##*release} | awk '{print $1}'); \
+    minorver=${release_version}; \
+    if [[ ${major_version} -lt 7 ]]; \
+    then cp /etc/yum.repos.d/bak/CentOS*-Base* /etc/yum.repos.d/; \
+    sed -e "s|^mirrorlist=|#mirrorlist=|g" \
+         -e "s|^#baseurl=http://mirror.centos.org/centos/\$releasever|baseurl=https://mirrors.aliyun.com/centos-vault/$minorver|g" \
+         -i.bak \
+         /etc/yum.repos.d/CentOS-*.repo; \
+    elif [[ ${major_version} -eq 7 ]]; \
+    then curl -ko /etc/yum.repos.d/CentOS-Base.repo https://mirrors.163.com/.help/CentOS7-Base-163.repo; \
+    else cp /etc/yum.repos.d/bak/CentOS*-Base* /etc/yum.repos.d/; \
+    sed -e "s|^mirrorlist=|#mirrorlist=|g" \
+    -e "s|^#baseurl=http://mirror.centos.org/\$contentdir/\$releasever|baseurl=https://mirrors.aliyun.com/centos-vault/$minorver|g" \
+    -i.bak \
+    /etc/yum.repos.d/CentOS-*.repo;fi; \
+    yum clean all \
+     && yum makecache \
+     && yum groupinstall -y "Development tools" \
+     && yum install -y \
+        vim \
+        sudo \
+        wget \
+        openssh \
+        openssh-server \
+        openblas-devel \
+     && yum clean all \
+     && rm -rf /var/cache/yum/*; \
+     rm -rf /etc/yum.repos.d/*.repo \
+     && mv /etc/yum.repos.d/bak/* /etc/yum.repos.d/ \
+     && rm -rf /etc/yum.repos.d/bak
+WORKDIR /tmprm
+COPY --from=base /rstudio-2022-07-1/R-4.2.1-1-1.x86_64.rpm ./
+COPY --from=base /rstudio-2022-07-1/rstudio-server-rhel-2022.07.1-554-x86_64.rpm ./
+RUN yum install -y R-4.2.1-1-1.x86_64.rpm \
+    && ln -s /opt/R/4.2.1/bin/R /usr/local/bin/R \
+    && ln -s /opt/R/4.2.1/bin/Rscript /usr/local/bin/Rscript \
+    && yum install -y rstudio-server-rhel-2022.07.1-554-x86_64.rpm \
+    && chmod 1777 /var/run/rstudio-server \
+    && chmod 1777 /var/lib/rstudio-server \
+    && echo "export PATH=/usr/lib/rstudio-server/bin:${PATH}" >> /etc/bashrc \
+    && rm -rf /tmprm \
+    && rm -rf /var/cache/yum/* \
+    && ssh-keygen -A
+WORKDIR /
+ENTRYPOINT bash --login;
+

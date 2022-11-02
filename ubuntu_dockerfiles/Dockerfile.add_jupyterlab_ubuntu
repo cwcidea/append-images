@@ -1,0 +1,74 @@
+FROM sugonhub/sothisai:jupyterlab as base
+#请确保网络畅通,镜像os确保大于等于ubuntu:18.04
+#暂不支持python2,原始镜像内python不要安装在某个用户家目录下
+#请将以下FROM后的镜像修改为需要添加jupyter的原始镜像
+FROM original_images_name
+#如有疑问请通过以下邮箱联系
+LABEL maintainer="chenwch1@sugon.com"
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+ENV SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
+ARG SOURCES="-i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
+SHELL ["/bin/bash","-c"]
+USER root
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak \
+&& mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak \
+&& version_id=$(cat /etc/os-release | grep -i 'VERSION_CODENAME' | awk -F= '{print $2}') \
+&& echo -e "deb http://mirrors.aliyun.com/ubuntu/ ${version_id} main restricted universe multiverse \n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_id}-security main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_id}-updates main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_id}-proposed main restricted universe multiverse\n\
+deb http://mirrors.aliyun.com/ubuntu/ ${version_id}-backports main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_id} main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_id}-security main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_id}-updates main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_id}-proposed main restricted universe multiverse\n\
+deb-src http://mirrors.aliyun.com/ubuntu/ ${version_id}-backports main restricted universe multiverse" > /etc/apt/sources.list \
+&& apt-get update -y \
+    && apt-get install --no-install-recommends -y \
+    vim \
+    openssl \
+    libssl-dev \
+    net-tools \
+    locales \
+    wget \
+    git \
+    sudo \
+    openssh-client \
+    openssh-server \
+    && locale-gen en_US.UTF-8 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*; \
+which python3 2> /dev/null; \
+if [[ $? -ne 0 ]]; \
+then apt-get update -y \
+&& apt-get install --no-install-recommends -y \
+python3 \
+python3-pip \
+&& apt-get clean \
+&& rm -rf /var/lib/apt/lists/*;fi; \
+pip3 install --upgrade pip ${SOURCES} || pip install --upgrade pip ${SOURCES}; \
+pip3 install --no-cache-dir setuptools ${SOURCES} || pip install --no-cache-dir setuptools ${SOURCES}; \
+python_version=$(python3 -V | awk '{print $2}' | awk -F. '{print $1$2}'); \
+if [[ ${python_version} -lt 35 ]]; \
+then pip3 install --no-cache-dir jupyterlab==0.33.12 ${SOURCES} || pip install --no-cache-dir jupyterlab==0.33.12 ${SOURCES}; \
+elif [[ ${python_version} -ge 35 && ${python_version} -lt 37 ]]; \
+then pip3 install --no-cache-dir jupyterlab==2.3.2 ${SOURCES} || pip install --no-cache-dir jupyterlab==2.3.2 ${SOURCES}; \
+else pip3 install --no-cache-dir jupyterlab==3.5.0 ${SOURCES} || pip install --no-cache-dir jupyterlab==3.5.0 ${SOURCES};fi; \
+pip3 install --no-cache-dir ipywidgets ${SOURCES} || pip install --no-cache-dir ipywidgets ${SOURCES}; \
+mv /etc/apt/sources.list.bak /etc/apt/sources.list \
+&& mv /etc/apt/sources.list.d.bak /etc/apt/sources.list.d
+COPY --from=base /tmp/jupyter_lab_config.py /etc/
+RUN jupytersite="$(python3 -m pip show jupyterlab | grep -i '^location' | awk '{print $2}')" \
+    && JUPYTERLAB_DIR=$(echo ${jupytersite%%/lib/python*}) \
+    && if [[ ${JUPYTERLAB_DIR}/bin/jupyter != "/opt/conda/bin/jupyter" ]]; \
+    then mkdir -p /opt/conda/bin; \
+    ln -sf ${JUPYTERLAB_DIR}/bin/jupyter /opt/conda/bin/jupyter;fi \
+    && echo "export JUPYTER_CONFIG_PATH=/etc" >> /etc/bash.bashrc \
+    && echo "export JUPYTER=${JUPYTERLAB_DIR}/bin/jupyter" >> /etc/bash.bashrc\
+    && echo "export PATH=${JUPYTERLAB_DIR}/bin:${PATH}" >> /etc/bash.bashrc \
+    && ssh-keygen  -A
+EXPOSE 8888
