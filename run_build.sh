@@ -145,7 +145,7 @@ function save_image(){
         fi
 }
 
-set -ex
+# set -ex
 args=$(getopt -n $0 -o hi:t:a:v::o:: -l help,baseimage:,newtag:,add:,osversion::,out:: -- "$@")
 
 if [ $? != 0 ];then
