@@ -3,6 +3,7 @@
 FROM original_images_name
 #如有问题请通过以下邮箱联系
 LABEL maintainer="chenwch1@sugon.com"
+LABEL module="rstudio"
 ARG R_VERSION=4.2.1
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai

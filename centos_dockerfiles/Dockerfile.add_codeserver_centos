@@ -4,6 +4,7 @@ FROM sugonhub/sothisai:codeserver as base
 FROM original_images_name
 #如有问题请通过以下邮箱联系
 LABEL maintainer="chenwch1@sugon.com"
+LABEL module="vscode"
 ENV SHELL=/bin/bash \
     LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8 \

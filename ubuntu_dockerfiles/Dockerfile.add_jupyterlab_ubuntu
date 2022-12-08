@@ -5,6 +5,7 @@ FROM sugonhub/sothisai:jupyterlab as base
 FROM original_images_name
 #如有疑问请通过以下邮箱联系
 LABEL maintainer="chenwch1@sugon.com"
+LABEL module="jupyter"
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai
 ENV SHELL=/bin/bash \
