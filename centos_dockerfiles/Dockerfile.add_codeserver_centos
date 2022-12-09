@@ -56,6 +56,7 @@ RUN yum install -y code-server-4.7.0-amd64.rpm \
     && yum clean all \
     && rm -rf /var/cache/yum/* \
     && rm -rf /tmprm \
-    && ssh-keygen  -A
+    && ssh-keygen  -A \
+    && sed -i "s/#UseDNS .*/UseDNS no/" /etc/ssh/sshd_config
 WORKDIR /
 EXPOSE 8080
