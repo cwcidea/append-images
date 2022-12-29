@@ -47,6 +47,7 @@ deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-backports main res
     && rm -rf /tmprm \
     && mv /etc/apt/sources.list.bak /etc/apt/sources.list \
     && mv /etc/apt/sources.list.d.bak /etc/apt/sources.list.d \
+    && mkdir -p /var/run/sshd \
     && ssh-keygen  -A \
     && sed -i "s/#UseDNS .*/UseDNS no/" /etc/ssh/sshd_config
 WORKDIR /

@@ -55,6 +55,7 @@ deb-src http://mirrors.aliyun.com/ubuntu/ ${version_codename}-backports main res
     && echo "export PATH=/usr/lib/rstudio-server/bin:${PATH}" >> /etc/bashrc \
     && rm -rf /tmprm \
     && rm -rf /var/cache/yum/* \
+    && mkdir -p /var/run/sshd \
     && ssh-keygen  -A \
     && sed -i "s/#UseDNS .*/UseDNS no/" /etc/ssh/sshd_config
 WORKDIR /
