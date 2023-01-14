@@ -114,6 +114,9 @@ function build_image(){
         docker build -f ./tmp/${tmp_dockerfile} -t ${newtag} ./tmp/
         if [[ $? -eq 0 ]];then
                 echo -e "\033[32mBuild Image Successfully !\033[0m"
+        else
+                echo -e "\033[32mBuild Image unsuccessful !\033[0m"
+                exit 1
         fi
 }
 
@@ -122,9 +125,9 @@ function save_image(){
                 echo "Saving the image may take some time..."
                 case ${out} in
                         ""|tgz)
-                        docker save ${newtag} | gzip > ./tmp/${newtag//:/}.tgz
+                        docker save ${newtag} | gzip > ./tmp/${newtag//:/}.tar.gz
                         if [[ $? -eq 0 ]];then
-                                echo -e "\033[32mSave Image: ./tmp/${newtag//:/}.tgz Successfully.\033[0m"
+                                echo -e "\033[32mSave Image: ./tmp/${newtag//:/}.tar.gz Successfully.\033[0m"
                         fi
                         ;;
                         tar)
