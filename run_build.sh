@@ -58,7 +58,7 @@ function check_os(){
 
 function load_image(){
         echo "Loading the image may take some time..."
-        last_line="$(docker load < ${baseimage} 2> /dev/null | grep -i '^Loaded image')"
+        last_line="$((docker load < ${baseimage}) 2> /dev/null | grep -i '^Loaded image')"
         base_tag="$(echo ${last_line} | awk '{print $3}')"
         if [[ ${base_tag} == "" ]];then
         base_tag=${baseimage}
